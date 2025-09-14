@@ -1,0 +1,43 @@
+# Testing dependencies for QSFL-CAAD
+
+# Core Testing Framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-asyncio>=0.21.0
+pytest-benchmark>=4.0.0
+pytest-xdist>=3.3.0
+pytest-html>=3.2.0
+pytest-json-report>=1.5.0
+pytest-timeout>=2.1.0
+
+# Test Data & Fixtures
+factory-boy>=3.3.0
+faker>=19.3.0
+responses>=0.23.0  # Mock HTTP responses
+requests-mock>=1.11.0
+
+# Property-based Testing
+hypothesis>=6.82.0
+
+# Load Testing
+locust>=2.16.0
+
+# Database Testing
+pytest-postgresql>=5.0.0
+pytest-redis>=3.0.0
+
+# Async Testing
+pytest-asyncio>=0.21.0
+aioresponses>=0.7.4
+
+# Security Testing
+pytest-security>=0.1.0
+
+# Performance Testing
+pytest-benchmark>=4.0.0
+memory-profiler>=0.61.0
+
+# Test Utilities
+freezegun>=1.2.2  # Mock datetime
+testcontainers>=3.7.0  # Integration testing with containers

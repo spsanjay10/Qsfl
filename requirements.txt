@@ -1,0 +1,14 @@
+numpy>=1.21.0
+scikit-learn>=1.0.0
+matplotlib>=3.5.0
+pyyaml>=6.0
+psutil>=5.8.0
+shap>=0.41.0
+cryptography>=3.4.0
+
+# Optional dependencies
+# pqcrypto>=0.7.0  # May require compilation
+# tensorflow>=2.8.0  # For ML models
+flask>=2.0.0  # For web dashboard
+flask-socketio>=5.0.0  # For real-time dashboard
+flask-cors>=4.0.0  # For CORS support

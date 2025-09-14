@@ -1,0 +1,19 @@
+security:
+  anomaly_threshold: 0.6
+  reputation_decay: 0.95
+  quarantine_threshold: 0.8
+
+federated_learning:
+  min_clients: 2
+  max_clients: 100
+  aggregation_method: "federated_averaging"
+
+monitoring:
+  log_level: "INFO"
+  metrics_interval: 60
+
+demo:
+  update_interval: 2.0
+  visualization_update: 1.0
+  num_honest_clients: 6
+  num_malicious_clients: 2

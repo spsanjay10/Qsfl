@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+
+{% block title %}Clients - QSFL-CAAD{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-users me-2"></i>
+        Client Management
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-success" id="addClientBtn">
+                <i class="fas fa-plus"></i> Add Client
+            </button>
+            <button type="button" class="btn btn-sm btn-warning" id="bulkActionBtn">
+                <i class="fas fa-cogs"></i> Bulk Actions
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Client Statistics -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-success" id="honestCount">0</h3>
+                <p class="card-text">Honest Clients</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-warning" id="suspiciousCount">0</h3>
+                <p class="card-text">Suspicious Clients</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-danger" id="maliciousCount">0</h3>
+                <p class="card-text">Malicious Clients</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <h3 class="text-secondary" id="quarantinedCount">0</h3>
+                <p class="card-text">Quarantined</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Client Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="row align-items-center">
+            <div class="col">
+                <h5 class="card-title mb-0">Client Details</h5>
+            </div>
+            <div class="col-auto">
+                <div class="input-group input-group-sm">
+                    <input type="text" class="form-control" placeholder="Search clients..." id="searchInput">
+                    <button class="btn btn-outline-secondary" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="clientsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th>
+                            <input type="checkbox" id="selectAll">
+                        </th>
+                        <th>Client ID</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Location</th>
+                        <th>Reputation</th>
+                        <th>Last Anomaly</th>
+                        <th>Updates Sent</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clientsTableBody">
+                    <!-- Client rows will be populated here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Client Detail Modal -->
+<div class="modal fade" id="clientModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-user me-2"></i>
+                    Client Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Basic Information</h6>
+                        <table class="table table-sm">
+                            <tr><td>Client ID:</td><td id="modalClientId">-</td></tr>
+                            <tr><td>Type:</td><td id="modalClientType">-</td></tr>
+                            <tr><td>Status:</td><td id="modalClientStatus">-</td></tr>
+                            <tr><td>Location:</td><td id="modalClientLocation">-</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Performance Metrics</h6>
+                        <table class="table table-sm">
+                            <tr><td>Reputation:</td><td id="modalClientReputation">-</td></tr>
+                            <tr><td>Last Anomaly Score:</td><td id="modalClientAnomaly">-</td></tr>
+                            <tr><td>Updates Sent:</td><td id="modalClientUpdates">-</td></tr>
+                            <tr><td>Model Accuracy:</td><td id="modalClientAccuracy">-</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Reputation History</h6>
+                        <div id="clientReputationChart" style="height: 200px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" id="quarantineBtn">Quarantine</button>
+                <button type="button" class="btn btn-info" id="resetReputationBtn">Reset Reputation</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentClientId = null;
+    
+    // Update clients page
+    function updateDashboard(data) {
+        updateClientStats(data);
+        updateClientTable(data);
+    }
+    
+    // Update client statistics
+    function updateClientStats(data) {
+        const clients = data.clients || {};
+        const stats = {
+            honest: 0,
+            suspicious: 0,
+            malicious: 0,
+            quarantined: 0
+        };
+        
+        Object.values(clients).forEach(client => {
+            stats[client.type]++;
+            if (client.quarantined) stats.quarantined++;
+        });
+        
+        document.getElementById('honestCount').textContent = stats.honest;
+        document.getElementById('suspiciousCount').textContent = stats.suspicious;
+        document.getElementById('maliciousCount').textContent = stats.malicious;
+        document.getElementById('quarantinedCount').textContent = stats.quarantined;
+    }
+    
+    // Update client table
+    function updateClientTable(data) {
+        const tbody = document.getElementById('clientsTableBody');
+        const clients = data.clients || {};
+        
+        const rows = Object.entries(clients).map(([clientId, client]) => {
+            const typeClass = client.type === 'honest' ? 'success' : 
+                             client.type === 'suspicious' ? 'warning' : 'danger';
+            const statusBadge = client.quarantined ? 
+                '<span class="badge bg-warning">Quarantined</span>' :
+                '<span class="badge bg-success">Active</span>';
+            
+            const location = client.location || {};
+            const locationText = location.city ? `${location.city}, ${location.country}` : 'Unknown';
+            
+            return `
+                <tr>
+                    <td><input type="checkbox" class="client-checkbox" value="${clientId}"></td>
+                    <td>
+                        <strong>${clientId}</strong>
+                        <br><small class="text-muted">${client.type}</small>
+                    </td>
+                    <td><span class="badge bg-${typeClass}">${client.type}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>${locationText}</td>
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="progress me-2" style="width: 60px; height: 8px;">
+                                <div class="progress-bar bg-${client.reputation > 0.8 ? 'success' : client.reputation > 0.5 ? 'warning' : 'danger'}" 
+                                     style="width: ${client.reputation * 100}%"></div>
+                            </div>
+                            <small>${client.reputation.toFixed(3)}</small>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge bg-${client.last_anomaly_score > 0.6 ? 'danger' : client.last_anomaly_score > 0.3 ? 'warning' : 'success'}">
+                            ${client.last_anomaly_score.toFixed(3)}
+                        </span>
+                    </td>
+                    <td>${client.updates_sent}</td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="viewClient('${clientId}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button class="btn btn-outline-warning" onclick="toggleQuarantine('${clientId}')">
+                                <i class="fas fa-${client.quarantined ? 'unlock' : 'ban'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        
+        tbody.innerHTML = rows;
+    }
+    
+    // View client details
+    function viewClient(clientId) {
+        currentClientId = clientId;
+        const client = dashboardData.clients[clientId];
+        
+        if (!client) return;
+        
+        // Populate modal
+        document.getElementById('modalClientId').textContent = clientId;
+        document.getElementById('modalClientType').textContent = client.type;
+        document.getElementById('modalClientStatus').textContent = client.quarantined ? 'Quarantined' : 'Active';
+        
+        const location = client.location || {};
+        document.getElementById('modalClientLocation').textContent = 
+            location.city ? `${location.city}, ${location.country}` : 'Unknown';
+        
+        document.getElementById('modalClientReputation').textContent = client.reputation.toFixed(3);
+        document.getElementById('modalClientAnomaly').textContent = client.last_anomaly_score.toFixed(3);
+        document.getElementById('modalClientUpdates').textContent = client.updates_sent;
+        document.getElementById('modalClientAccuracy').textContent = 
+            client.model_accuracy ? (client.model_accuracy * 100).toFixed(1) + '%' : 'N/A';
+        
+        // Update quarantine button
+        const quarantineBtn = document.getElementById('quarantineBtn');
+        quarantineBtn.textContent = client.quarantined ? 'Unquarantine' : 'Quarantine';
+        quarantineBtn.className = client.quarantined ? 'btn btn-success' : 'btn btn-warning';
+        
+        // Update reputation chart
+        updateClientReputationChart(clientId);
+        
+        // Show modal
+        new bootstrap.Modal(document.getElementById('clientModal')).show();
+    }
+    
+    // Update client reputation chart
+    function updateClientReputationChart(clientId) {
+        const reputationData = dashboardData.metrics?.reputation_scores?.[clientId] || [];
+        const timestamps = dashboardData.metrics?.timestamps || [];
+        
+        if (reputationData.length === 0) {
+            document.getElementById('clientReputationChart').innerHTML = 
+                '<div class="text-center text-muted">No reputation data available</div>';
+            return;
+        }
+        
+        const trace = {
+            x: timestamps.slice(-reputationData.length),
+            y: reputationData,
+            type: 'scatter',
+            mode: 'lines+markers',
+            name: 'Reputation',
+            line: { color: '#667eea', width: 2 }
+        };
+        
+        const layout = {
+            margin: { t: 20, r: 20, b: 40, l: 60 },
+            xaxis: { title: 'Time' },
+            yaxis: { title: 'Reputation', range: [0, 1] }
+        };
+        
+        Plotly.newPlot('clientReputationChart', [trace], layout, {responsive: true});
+    }
+    
+    // Toggle client quarantine
+    function toggleQuarantine(clientId) {
+        socket.emit('client_action', {
+            client_id: clientId,
+            action: dashboardData.clients[clientId].quarantined ? 'unquarantine' : 'quarantine'
+        });
+    }
+    
+    // Search functionality
+    function setupSearch() {
+        document.getElementById('searchInput').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const rows = document.querySelectorAll('#clientsTableBody tr');
+            
+            rows.forEach(row => {
+                const clientId = row.cells[1].textContent.toLowerCase();
+                const clientType = row.cells[2].textContent.toLowerCase();
+                
+                if (clientId.includes(searchTerm) || clientType.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Select all functionality
+    function setupSelectAll() {
+        document.getElementById('selectAll').addEventListener('change', function(e) {
+            const checkboxes = document.querySelectorAll('.client-checkbox');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+        });
+    }
+    
+    // Modal actions
+    function setupModalActions() {
+        document.getElementById('quarantineBtn').addEventListener('click', function() {
+            if (currentClientId) {
+                toggleQuarantine(currentClientId);
+                bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
+            }
+        });
+        
+        document.getElementById('resetReputationBtn').addEventListener('click', function() {
+            if (currentClientId) {
+                socket.emit('client_action', {
+                    client_id: currentClientId,
+                    action: 'reset_reputation'
+                });
+                bootstrap.Modal.getInstance(document.getElementById('clientModal')).hide();
+            }
+        });
+    }
+    
+    // Initialize clients page
+    document.addEventListener('DOMContentLoaded', function() {
+        setupSearch();
+        setupSelectAll();
+        setupModalActions();
+    });
+</script>
+{% endblock %}
